@@ -20,7 +20,9 @@ module List_library_contents = struct
     [@@deriving yojson]
   end
 
-  let uri ?(page_size = 25) ?page_token () =
+  let max_page_size = 100
+
+  let uri ?(page_size = max_page_size) ?page_token () =
     let query =
       let page_size = [ ("pageSize", [ [%string "%{page_size#Int}"] ]) ] in
       let page_token =
@@ -33,7 +35,7 @@ module List_library_contents = struct
     Uri.make ~scheme:"https" ~host:"photoslibrary.googleapis.com"
       ~path:"/v1/mediaItems" ~query ()
 
-  let rec submit_paged ~access_token acc page_token =
+  let rec submit_paged ~access_token ?max_items acc page_token =
     let uri = uri ?page_token () in
     let%bind response, body =
       Client.get ~headers:(base_headers ~access_token) uri
@@ -62,13 +64,23 @@ module List_library_contents = struct
                   (exn : exn)
                   (body_s : string)]
         in
-
         let { Response.media_items; next_page_token } = response in
+        let new_acc = acc @ media_items in
         match next_page_token with
-        | None -> Deferred.Or_error.return (acc @ media_items)
-        | Some next_page_token ->
-            submit_paged ~access_token (acc @ media_items)
-              (Some next_page_token))
+        | None -> Deferred.Or_error.return new_acc
+        | Some next_page_token -> (
+            let submit_next_page () =
+              submit_paged ~access_token ?max_items new_acc
+                (Some next_page_token)
+            in
+            match max_items with
+            | None -> submit_next_page ()
+            | Some max_items ->
+                if List.length new_acc < max_items then submit_next_page ()
+                else
+                  List.drop (List.rev new_acc) (List.length new_acc - max_items)
+                  |> List.rev |> Deferred.Or_error.return))
 
-  let submit ~access_token () = submit_paged ~access_token [] None
+  let submit ~access_token ?max_items () =
+    submit_paged ~access_token ?max_items [] None
 end

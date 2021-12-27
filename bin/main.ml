@@ -23,8 +23,11 @@ let cmd_list =
        flag "-auth-file"
          (required Filename.arg_type)
          ~doc:"Path to file containing auth tokens"
+     and max_photos =
+       flag "-max-photos" (optional int)
+         ~doc:"Stop after listing this many photos"
      in
-     fun () -> Photo_archiver.list ~auth_file)
+     fun () -> Photo_archiver.list ~auth_file ?max_photos ())
 
 let command =
   Command.group ~summary:"TODO"

@@ -15,7 +15,7 @@ let authorize ?output_file ~client_id ~client_secret () =
       print_endline "Done! Saved result to output file.";
       Ok ()
 
-let list ~auth_file =
+let list ~auth_file ?max_photos () =
   let%bind.Deferred.Or_error oauth =
     Reader.load_sexp auth_file Google_photos.Oauth.t_of_sexp
   in
@@ -23,6 +23,7 @@ let list ~auth_file =
     Google_photos.Oauth.obtain_access_token oauth
   in
   let%map.Deferred.Or_error photos =
-    Google_photos.Api.List_library_contents.submit ~access_token ()
+    Google_photos.Api.List_library_contents.submit ~access_token
+      ?max_items:max_photos ()
   in
   print_s [%sexp { photos : Google_photos.Types.Media_item.t list }]

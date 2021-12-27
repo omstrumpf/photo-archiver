@@ -8,4 +8,5 @@ val authorize :
   unit ->
   unit Deferred.Or_error.t
 
-val list : auth_file:string -> unit Deferred.Or_error.t
+val list :
+  auth_file:string -> ?max_photos:int -> unit -> unit Deferred.Or_error.t
