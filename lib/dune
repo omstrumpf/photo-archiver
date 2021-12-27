@@ -1,0 +1,5 @@
+(library
+ (name photo_archiver)
+ (libraries core google_photos)
+ (preprocess
+  (pps ppx_jane)))
