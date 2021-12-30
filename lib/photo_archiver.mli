@@ -10,3 +10,6 @@ val authorize :
 
 val list :
   auth_file:string -> ?max_photos:int -> unit -> unit Deferred.Or_error.t
+
+val sync_db :
+  db_file:string -> archive_dir:string -> unit -> unit Deferred.Or_error.t

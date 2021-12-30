@@ -29,8 +29,23 @@ let cmd_list =
      in
      fun () -> Photo_archiver.list ~auth_file ?max_photos ())
 
+let cmd_sync_db =
+  Command.async_or_error ~summary:"Synchronize the database with files on disk"
+    (let%map_open.Command db_file =
+       flag "-database-file"
+         (required Filename.arg_type)
+         ~doc:"Path to sqlite3 database file"
+     and archive_dir =
+       flag "-archive-directory"
+         (required Filename.arg_type)
+         ~doc:"Path to photo archive directory"
+     in
+     fun () -> Photo_archiver.sync_db ~db_file ~archive_dir ())
+
 let command =
   Command.group ~summary:"TODO"
-    [ ("authorize", cmd_authorize); ("list", cmd_list) ]
+    [
+      ("authorize", cmd_authorize); ("list", cmd_list); ("sync-db", cmd_sync_db);
+    ]
 
 let () = Command.run command
