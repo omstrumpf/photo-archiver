@@ -1,11 +1,6 @@
 open! Core
 open! Async
 
-module Photo : sig
-  type t = { id : string; archive_path : string }
-  [@@deriving sexp_of, fields, equal]
-end
-
 type t
 
 val with_db :
@@ -13,4 +8,9 @@ val with_db :
 
 val insert_photo : t -> Photo.t -> unit Or_error.t
 val lookup_photo : t -> id:string -> Photo.t option Or_error.t
+
+val lookup_photo_by_archive_path :
+  t -> archive_path:string -> Photo.t option Or_error.t
+
 val all_photos : t -> Photo.t String.Map.t Or_error.t
+val remove_photo : t -> id:string -> unit Or_error.t

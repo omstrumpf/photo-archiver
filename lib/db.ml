@@ -1,19 +1,14 @@
 open! Core
 open! Async
 
-module Photo = struct
-  type t = { id : string; archive_path : string }
-  [@@deriving sexp_of, fields, equal]
-
-  let of_db_row row =
-    match Array.to_list row with
-    | [ id; archive_path ] -> Ok { id; archive_path }
-    | _ ->
-        Or_error.error_s
-          [%message "Database error: failed to parse row" (row : string array)]
-end
-
 type t = Sqlite3.db
+
+let parse_db_row row =
+  match Array.to_list row with
+  | [ id; archive_path ] -> Ok { Photo.id; archive_path }
+  | _ ->
+      Or_error.error_s
+        [%message "Database error: failed to parse row" (row : string array)]
 
 let or_error_of_rc rc =
   if Sqlite3.Rc.is_success rc then Ok ()
@@ -57,11 +52,31 @@ let lookup_photo t ~id =
   match !results with
   | [] -> Ok None
   | [ row ] ->
-      let%map.Or_error photo = Photo.of_db_row row in
+      let%map.Or_error photo = parse_db_row row in
       Some photo
   | _ ->
       Or_error.error_s
         [%message "Database invariant violated: id not unique" (id : string)]
+
+let lookup_photo_by_archive_path t ~archive_path =
+  let results = ref [] in
+  let%bind.Or_error () =
+    Sqlite3.exec_not_null_no_headers t
+      ~cb:(fun row -> results := !results @ [ row ])
+      [%string
+        "SELECT * FROM photos WHERE archive_path = %{archive_path} LIMIT 1"]
+    |> or_error_of_rc
+  in
+  match !results with
+  | [] -> Ok None
+  | [ row ] ->
+      let%map.Or_error photo = parse_db_row row in
+      Some photo
+  | _ ->
+      Or_error.error_s
+        [%message
+          "Database invariant violated: archive_path not unique"
+            (archive_path : string)]
 
 let all_photos t =
   let results = ref [] in
@@ -72,7 +87,11 @@ let all_photos t =
     |> or_error_of_rc
   in
   let%bind.Or_error photos_list =
-    List.map !results ~f:Photo.of_db_row |> Or_error.combine_errors
+    List.map !results ~f:parse_db_row |> Or_error.combine_errors
   in
   List.map photos_list ~f:(fun photo -> (Photo.id photo, photo))
   |> String.Map.of_alist_or_error
+
+let remove_photo t ~id =
+  Sqlite3.exec t [%string "DELETE * FROM photos WHERE id = %{id} LIMIT 1"]
+  |> or_error_of_rc
