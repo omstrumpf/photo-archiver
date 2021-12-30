@@ -39,8 +39,8 @@ let cmd_sync_db =
        flag "-archive-directory"
          (required Filename.arg_type)
          ~doc:"Path to photo archive directory"
-     in
-     fun () -> Photo_archiver.sync_db ~db_file ~archive_dir ())
+     and dry_run = flag "-dry-run" no_arg ~doc:"don't modify database" in
+     fun () -> Photo_archiver.sync_db ~dry_run ~db_file ~archive_dir ())
 
 let command =
   Command.group ~summary:"TODO"

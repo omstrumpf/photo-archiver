@@ -38,7 +38,8 @@ let insert_photo t photo =
   let { Photo.id; archive_path } = photo in
   Sqlite3.exec t
     [%string
-      "INSERT INTO photos (id, archive_path) VALUES (%{id}, %{archive_path});"]
+      "INSERT INTO photos (id, archive_path) VALUES ('%{id}', \
+       '%{archive_path}');"]
   |> or_error_of_rc
 
 let lookup_photo t ~id =
@@ -46,7 +47,7 @@ let lookup_photo t ~id =
   let%bind.Or_error () =
     Sqlite3.exec_not_null_no_headers t
       ~cb:(fun row -> results := !results @ [ row ])
-      [%string "SELECT * FROM photos WHERE id = %{id} LIMIT 1"]
+      [%string "SELECT * FROM photos WHERE id='%{id}' LIMIT 1"]
     |> or_error_of_rc
   in
   match !results with
@@ -64,7 +65,7 @@ let lookup_photo_by_archive_path t ~archive_path =
     Sqlite3.exec_not_null_no_headers t
       ~cb:(fun row -> results := !results @ [ row ])
       [%string
-        "SELECT * FROM photos WHERE archive_path = %{archive_path} LIMIT 1"]
+        "SELECT * FROM photos WHERE archive_path='%{archive_path}' LIMIT 1"]
     |> or_error_of_rc
   in
   match !results with
@@ -93,5 +94,5 @@ let all_photos t =
   |> String.Map.of_alist_or_error
 
 let remove_photo t ~id =
-  Sqlite3.exec t [%string "DELETE * FROM photos WHERE id = %{id} LIMIT 1"]
+  Sqlite3.exec t [%string "DELETE FROM photos WHERE id='%{id}' LIMIT 1"]
   |> or_error_of_rc
