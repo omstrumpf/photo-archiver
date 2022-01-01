@@ -35,7 +35,7 @@ module List_library_contents = struct
     Uri.make ~scheme:"https" ~host:"photoslibrary.googleapis.com"
       ~path:"/v1/mediaItems" ~query ()
 
-  let rec submit_paged ~access_token ?max_items acc page_token =
+  let rec submit_paged ~access_token ?limit acc page_token =
     let uri = uri ?page_token () in
     let%bind response, body =
       Client.get ~headers:(base_headers ~access_token) uri
@@ -70,17 +70,15 @@ module List_library_contents = struct
         | None -> Deferred.Or_error.return new_acc
         | Some next_page_token -> (
             let submit_next_page () =
-              submit_paged ~access_token ?max_items new_acc
-                (Some next_page_token)
+              submit_paged ~access_token ?limit new_acc (Some next_page_token)
             in
-            match max_items with
+            match limit with
             | None -> submit_next_page ()
-            | Some max_items ->
-                if List.length new_acc < max_items then submit_next_page ()
+            | Some limit ->
+                if List.length new_acc < limit then submit_next_page ()
                 else
-                  List.drop (List.rev new_acc) (List.length new_acc - max_items)
+                  List.drop (List.rev new_acc) (List.length new_acc - limit)
                   |> List.rev |> Deferred.Or_error.return))
 
-  let submit ~access_token ?max_items () =
-    submit_paged ~access_token ?max_items [] None
+  let submit ~access_token ?limit () = submit_paged ~access_token ?limit [] None
 end

@@ -18,12 +18,11 @@ let authorize ?output_file ~client_id ~client_secret () =
       print_endline "Done! Saved result to output file.";
       Ok ()
 
-let list ~auth_file ?max_photos () =
+let list ~auth_file ?limit () =
   let%bind oauth = Reader.load_sexp auth_file Google_photos.Oauth.t_of_sexp in
   let%bind access_token = Google_photos.Oauth.obtain_access_token oauth in
   let%map photos =
-    Google_photos.Api.List_library_contents.submit ~access_token
-      ?max_items:max_photos ()
+    Google_photos.Api.List_library_contents.submit ~access_token ?limit ()
   in
   print_s [%sexp { photos : Google_photos.Types.Media_item.t list }]
 

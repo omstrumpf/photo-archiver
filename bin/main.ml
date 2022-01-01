@@ -23,11 +23,10 @@ let cmd_list =
        flag "-auth-file"
          (required Filename.arg_type)
          ~doc:"Path to file containing auth tokens"
-     and max_photos =
-       flag "-max-photos" (optional int)
-         ~doc:"Stop after listing this many photos"
+     and limit =
+       flag "-limit" (optional int) ~doc:"Stop after listing this many photos"
      in
-     fun () -> Photo_archiver.list ~auth_file ?max_photos ())
+     fun () -> Photo_archiver.list ~auth_file ?limit ())
 
 let cmd_sync_db =
   Command.async_or_error ~summary:"Synchronize the database with files on disk"
