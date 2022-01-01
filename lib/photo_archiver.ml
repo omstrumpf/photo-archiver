@@ -18,13 +18,41 @@ let authorize ?output_file ~client_id ~client_secret () =
       print_endline "Done! Saved result to output file.";
       Ok ()
 
+let photo_of_api media_item =
+  let {
+    Google_photos.Types.Media_item.id;
+    media_metadata;
+    filename;
+    description = _;
+    product_url = _;
+    base_url = _;
+    mime_type = _;
+  } =
+    media_item
+  in
+  let%map.Or_error created_at =
+    Or_error.try_with (fun () ->
+        Google_photos.Types.Media_metadata.creation_time media_metadata
+        |> Time_ns.of_string_gen ~if_no_timezone:`Local)
+  in
+  let archive_path =
+    (* TODO this is probably not the right structure - only want to generate an
+       archive path if we haven't already stored this photo *)
+    ""
+  in
+  { Photo.id; name = filename; archive_path; created_at }
+
 let list ~auth_file ?limit () =
   let%bind oauth = Reader.load_sexp auth_file Google_photos.Oauth.t_of_sexp in
   let%bind access_token = Google_photos.Oauth.obtain_access_token oauth in
-  let%map photos =
+  let%bind photos =
     Google_photos.Api.List_library_contents.submit ~access_token ?limit ()
   in
-  print_s [%sexp { photos : Google_photos.Types.Media_item.t list }]
+  let%map photos =
+    Deferred.Or_error.List.map photos ~f:(fun item ->
+        photo_of_api item |> Deferred.return)
+  in
+  print_s [%sexp { photos : Photo.t list }]
 
 let sync_db ?(dry_run = false) ~db_file ~archive_dir () =
   Db.with_db ~db_file ~f:(fun db ->
