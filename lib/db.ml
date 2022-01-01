@@ -5,7 +5,11 @@ type t = Sqlite3.db
 
 let parse_db_row row =
   match Array.to_list row with
-  | [ id; archive_path ] -> Ok { Photo.id; archive_path }
+  | [ id; archive_path; created_at ] ->
+      let%map.Or_error created_at =
+        Or_error.try_with (fun () -> Time_ns.of_string created_at)
+      in
+      { Photo.id; archive_path; created_at }
   | _ ->
       Or_error.error_s
         [%message "Database error: failed to parse row" (row : string array)]
@@ -18,7 +22,7 @@ let or_error_of_rc rc =
 let create_table_if_not_found t () =
   Sqlite3.exec t
     "CREATE TABLE IF NOT EXISTS photos (id string PRIMARY KEY, archive_path \
-     string NOT NULL UNIQUE);"
+     string NOT NULL UNIQUE, created_at string NOT NULL);"
   |> or_error_of_rc
 
 let with_db ~db_file ~f =
@@ -35,11 +39,12 @@ let with_db ~db_file ~f =
   | true -> result
 
 let insert_photo t photo =
-  let { Photo.id; archive_path } = photo in
+  let { Photo.id; archive_path; created_at } = photo in
+  let created_at = Time_ns.to_string created_at in
   Sqlite3.exec t
     [%string
-      "INSERT INTO photos (id, archive_path) VALUES ('%{id}', \
-       '%{archive_path}');"]
+      "INSERT INTO photos (id, archive_path, created_at) VALUES ('%{id}', \
+       '%{archive_path}', '%{created_at}');"]
   |> or_error_of_rc
 
 let lookup_photo t ~id =
