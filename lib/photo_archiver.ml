@@ -1,6 +1,7 @@
 open! Core
 open! Async
 open Deferred.Or_error.Let_syntax
+module Config = Config
 
 let authorize ?output_file ~client_id ~client_secret () =
   let%bind oauth =
@@ -18,7 +19,7 @@ let authorize ?output_file ~client_id ~client_secret () =
       print_endline "Done! Saved result to output file.";
       Ok ()
 
-let list ~auth_file ?limit () =
+let list ?limit { Config.auth_file; _ } =
   let%bind oauth = Reader.load_sexp auth_file Google_photos.Oauth.t_of_sexp in
   let%bind access_token = Google_photos.Oauth.obtain_access_token oauth in
   let%map photos =
@@ -27,7 +28,7 @@ let list ~auth_file ?limit () =
   print_s
     [%sexp { photos : Google_photos.Api.List_library_contents.Photo.t list }]
 
-let sync_db ?(dry_run = false) ~db_file ~archive_dir () =
+let sync_db ?(dry_run = false) { Config.db_file; archive_dir; _ } =
   Db.with_db ~db_file ~f:(fun db ->
       let%bind db_photos = Db.all_photos db |> Deferred.return in
       let db_filenames =

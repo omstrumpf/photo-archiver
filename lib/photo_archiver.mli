@@ -1,5 +1,6 @@
 open! Core
 open! Async
+module Config = Config
 
 val authorize :
   ?output_file:string ->
@@ -8,11 +9,5 @@ val authorize :
   unit ->
   unit Deferred.Or_error.t
 
-val list : auth_file:string -> ?limit:int -> unit -> unit Deferred.Or_error.t
-
-val sync_db :
-  ?dry_run:bool ->
-  db_file:string ->
-  archive_dir:string ->
-  unit ->
-  unit Deferred.Or_error.t
+val list : ?limit:int -> Config.t -> unit Deferred.Or_error.t
+val sync_db : ?dry_run:bool -> Config.t -> unit Deferred.Or_error.t
