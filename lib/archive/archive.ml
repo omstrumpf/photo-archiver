@@ -16,6 +16,7 @@ let all_archived_files ~archive_dir =
   in
   recursive_ls archive_dir
   >>| List.map ~f:(String.chop_prefix_exn ~prefix:archive_dir)
+  >>| List.map ~f:(String.chop_prefix_if_exists ~prefix:"/")
   >>| String.Set.of_list
 ;;
 
