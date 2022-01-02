@@ -45,7 +45,7 @@ module Media_item = struct
   [@@deriving fields, sexp, yojson] [@@yojson.allow_extra_fields]
 end
 
-module List_library_contents = struct
+module List_photos = struct
   module Photo = struct
     type t =
       { id : string

@@ -2,9 +2,9 @@ open! Core
 open! Async
 
 type t =
-  { auth_file : string
-  ; db_file : string
-  ; archive_dir : string
+  { auth_file : string (* File where google-photos credentials are stored *)
+  ; db_file : string (* Sqlite3 database file for storing photo archive mappings *)
+  ; archive_dir : string (* Directory where photos are archived *)
   }
 [@@deriving sexp, fields]
 

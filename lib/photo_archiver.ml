@@ -19,16 +19,14 @@ let authorize ?output_file ~client_id ~client_secret () =
 let list ?limit { Config.auth_file; _ } =
   let%bind oauth = Reader.load_sexp auth_file Google_photos.Oauth.t_of_sexp in
   let%bind access_token = Google_photos.Oauth.obtain_access_token oauth in
-  let%map photos =
-    Google_photos.Api.List_library_contents.submit ~access_token ?limit ()
-  in
-  print_s [%sexp { photos : Google_photos.Api.List_library_contents.Photo.t list }]
+  let%map photos = Google_photos.Api.List_photos.submit ~access_token ?limit () in
+  print_s [%sexp { photos : Google_photos.Api.List_photos.Photo.t list }]
 ;;
 
 let archive ?(dry_run = false) ?limit { Config.auth_file; db_file; archive_dir } =
   let%bind oauth = Reader.load_sexp auth_file Google_photos.Oauth.t_of_sexp in
   let%bind access_token = Google_photos.Oauth.obtain_access_token oauth in
-  let%bind photos = Google_photos.Api.List_library_contents.submit ~access_token () in
+  let%bind photos = Google_photos.Api.List_photos.submit ~access_token () in
   let num_present_photos = ref 0 in
   let num_new_photos = ref 0 in
   let incr x = x := !x + 1 in
@@ -43,7 +41,7 @@ let archive ?(dry_run = false) ?limit { Config.auth_file; db_file; archive_dir }
             if over_limit ()
             then return ()
             else (
-              let { Google_photos.Api.List_library_contents.Photo.id
+              let { Google_photos.Api.List_photos.Photo.id
                   ; name
                   ; created_at
                   ; download_url

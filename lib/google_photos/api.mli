@@ -1,7 +1,7 @@
 open! Core
 open! Async
 
-module List_library_contents : sig
+module List_photos : sig
   module Photo : sig
     type t =
       { id : string
