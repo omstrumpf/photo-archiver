@@ -2,7 +2,6 @@ open! Core
 open! Async
 open Cohttp
 open Cohttp_async
-open Types
 
 let base_headers ~access_token =
   Cohttp.Header.of_list
@@ -11,7 +10,49 @@ let base_headers ~access_token =
       ("authorization", "Bearer " ^ access_token);
     ]
 
+module Media_metadata = struct
+  type t = { creation_time : string [@key "creationTime"] }
+  [@@deriving fields, sexp, yojson] [@@yojson.allow_extra_fields]
+end
+
+module Media_item = struct
+  type t = {
+    id : string;
+    filename : string;
+    description : string option; [@yojson.option]
+    product_url : string option; [@yojson.option] [@key "productURL"]
+    base_url : string option; [@yojson.option] [@key "baseURL"]
+    mime_type : string option; [@yojson.option] [@key "mimeType"]
+    media_metadata : Media_metadata.t; [@key "mediaMetadata"]
+  }
+  [@@deriving fields, sexp, yojson] [@@yojson.allow_extra_fields]
+end
+
 module List_library_contents = struct
+  module Photo = struct
+    type t = { id : string; name : string; created_at : Time_ns.t }
+    [@@deriving fields, sexp_of]
+
+    let of_media_item media_item =
+      let {
+        Media_item.id;
+        media_metadata;
+        filename;
+        description = _;
+        product_url = _;
+        base_url = _;
+        mime_type = _;
+      } =
+        media_item
+      in
+      let { Media_metadata.creation_time } = media_metadata in
+      let%map.Or_error created_at =
+        Or_error.try_with (fun () ->
+            Time_ns.of_string_gen ~if_no_timezone:`Local creation_time)
+      in
+      { id; name = filename; created_at }
+  end
+
   module Response = struct
     type t = {
       media_items : Media_item.t list; [@key "mediaItems"] [@default []]
@@ -80,5 +121,10 @@ module List_library_contents = struct
                   List.drop (List.rev new_acc) (List.length new_acc - limit)
                   |> List.rev |> Deferred.Or_error.return))
 
-  let submit ~access_token ?limit () = submit_paged ~access_token ?limit [] None
+  let submit ~access_token ?limit () =
+    let%bind.Deferred.Or_error media_items =
+      submit_paged ~access_token ?limit [] None
+    in
+    List.map media_items ~f:Photo.of_media_item
+    |> Or_error.combine_errors |> return
 end
