@@ -1,7 +1,11 @@
 open! Core
 open! Async
 
-type t = { auth_file : string; db_file : string; archive_dir : string }
+type t =
+  { auth_file : string
+  ; db_file : string
+  ; archive_dir : string
+  }
 [@@deriving sexp, fields]
 
 val load : string -> t Core.Or_error.t Async.Deferred.t
