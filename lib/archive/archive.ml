@@ -1,10 +1,15 @@
 open! Core
 open! Async
 
+let ignore_filenames = [ ".DS_Store" ] |> String.Set.of_list
+
 let all_archived_files ~archive_dir =
   let rec recursive_ls path =
     match%bind Sys.is_directory_exn path with
-    | false -> return [ path ]
+    | false -> (
+        match Set.mem ignore_filenames (Filename.basename path) with
+        | true -> return []
+        | false -> return [ path ])
     | true ->
         Sys.ls_dir path
         >>= Deferred.List.concat_map ~f:(fun child ->
