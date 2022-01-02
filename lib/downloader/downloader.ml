@@ -33,7 +33,7 @@ let follow_redirects ?(max_redirects = 10) uri f =
   in
   loop ~max_redirects uri
 
-let download_photo ~from_url ~to_file =
+let download ~from_url ~to_file =
   let%bind response, body =
     follow_redirects (Uri.of_string from_url) Cohttp_async.Client.get
   in
@@ -45,7 +45,7 @@ let download_photo ~from_url ~to_file =
       let%bind body_s = Cohttp_async.Body.to_string body in
       Deferred.Or_error.error_s
         [%message
-          "Failed to download photo"
+          "Failed to download file"
             ~download_url:(from_url : string)
             ~code:
               (Cohttp.Response.status response |> Cohttp.Code.code_of_status

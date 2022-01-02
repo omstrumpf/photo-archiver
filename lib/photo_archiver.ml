@@ -69,18 +69,31 @@ let archive ?(dry_run = false) ?limit { Config.auth_file; db_file; archive_dir }
                         [%string
                           "Would download %{name} (%{created_at_date#Date})."];
                       return ()
-                  | false ->
+                  | false -> (
                       print_endline
                         [%string
                           "Downloading %{name} (%{created_at_date#Date})..."];
-                      let%bind photo =
-                        Archive.download_photo ~archive_dir ~id ~name
-                          ~created_at ~download_url
+                      let archive_path =
+                        Archive.archive_path ~name ~created_at
                       in
-                      let%map () =
-                        Db.insert_photo db photo |> Deferred.return
+                      let photo =
+                        { Db.Photo.id; name; created_at; archive_path }
                       in
-                      incr num_new_photos)))
+                      match%bind.Deferred
+                        Downloader.download ~from_url:download_url
+                          ~to_file:(archive_dir ^/ archive_path)
+                      with
+                      | Error e ->
+                          Deferred.Or_error.error_s
+                            [%message
+                              "Failed to download photo"
+                                ~photo:(photo : Db.Photo.t)
+                                ~download_error:(e : Error.t)]
+                      | Ok () ->
+                          let%map () =
+                            Db.insert_photo db photo |> Deferred.return
+                          in
+                          incr num_new_photos))))
   in
   print_endline
     [%string
@@ -92,7 +105,7 @@ let sync_db ?(dry_run = false) { Config.db_file; archive_dir; _ } =
       let%bind db_photos = Db.all_photos db |> Deferred.return in
       let db_filenames =
         String.Map.to_alist db_photos
-        |> List.map ~f:(fun (_id, photo) -> Photo.archive_path photo)
+        |> List.map ~f:(fun (_id, photo) -> Db.Photo.archive_path photo)
         |> String.Set.of_list
       in
       let%bind archived_filenames =
@@ -113,9 +126,11 @@ let sync_db ?(dry_run = false) { Config.db_file; archive_dir; _ } =
                     Db.lookup_photo_by_archive_path db ~archive_path:db_filename
                     |> Or_error.map ~f:(fun x -> Option.value_exn x)
                   in
-                  let photo_s = Photo.sexp_of_t photo |> Sexp.to_string_hum in
+                  let photo_s =
+                    Db.Photo.sexp_of_t photo |> Sexp.to_string_hum
+                  in
                   let%bind.Or_error () =
-                    let id = Photo.id photo in
+                    let id = Db.Photo.id photo in
                     match dry_run with
                     | true ->
                         print_endline

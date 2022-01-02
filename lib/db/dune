@@ -1,0 +1,5 @@
+(library
+ (name db)
+ (libraries async core sqlite3)
+ (preprocess
+  (pps ppx_jane)))

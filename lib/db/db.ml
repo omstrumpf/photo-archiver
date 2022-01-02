@@ -1,5 +1,6 @@
 open! Core
 open! Async
+module Photo = Photo
 
 type t = Sqlite3.db
 
