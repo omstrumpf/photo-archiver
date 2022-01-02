@@ -120,10 +120,13 @@ let obtain_access_token t =
           ~body:(body_s : string)]
   | true ->
     (try
-       Yojson.Safe.from_string body_s
-       |> Access_token_response.t_of_yojson
-       |> Access_token_response.access_token
-       |> Deferred.Or_error.return
+       let access_token =
+         Yojson.Safe.from_string body_s
+         |> Access_token_response.t_of_yojson
+         |> Access_token_response.access_token
+       in
+       Log.Global.debug_s [%message "Obtained google-photos access token"];
+       Deferred.Or_error.return access_token
      with
     | exn ->
       Deferred.Or_error.error_s

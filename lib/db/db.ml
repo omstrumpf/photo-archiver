@@ -22,6 +22,7 @@ let or_error_of_rc rc =
 ;;
 
 let create_table_if_not_found t () =
+  Log.Global.debug_s [%message "Ensuring db table exists"];
   Sqlite3.exec
     t
     "CREATE TABLE IF NOT EXISTS photos (id string PRIMARY KEY, name string NOT NULL, \
@@ -42,6 +43,7 @@ let with_db ~db_file ~f =
 ;;
 
 let insert_photo t photo =
+  Log.Global.info_s [%message "inserting photo to db" (photo : Photo.t)];
   let { Photo.id; name; archive_path; created_at } = photo in
   let created_at = Time_ns.to_string created_at in
   Sqlite3.exec
@@ -107,5 +109,6 @@ let all_photos t =
 ;;
 
 let remove_photo t ~id =
+  Log.Global.info_s [%message "removing photo from db" (id : string)];
   Sqlite3.exec t [%string "DELETE FROM photos WHERE id='%{id}' LIMIT 1"] |> or_error_of_rc
 ;;

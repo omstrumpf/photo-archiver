@@ -157,6 +157,7 @@ module List_photos = struct
   ;;
 
   let submit ~access_token ?limit () =
+    Log.Global.debug_s [%message "Submitting google-photos API list request"];
     let%bind.Deferred.Or_error media_items = submit_paged ~access_token ?limit [] None in
     List.map media_items ~f:Photo.of_media_item |> Or_error.combine_errors |> return
   ;;

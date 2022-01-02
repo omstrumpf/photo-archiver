@@ -41,6 +41,7 @@ let follow_redirects ?(max_redirects = 10) uri f =
 ;;
 
 let download ~from_url ~to_file =
+  Log.Global.info_s [%message "Downloading file" (from_url : string) (to_file : string)];
   let%bind response, body =
     follow_redirects (Uri.of_string from_url) Cohttp_async.Client.get
   in

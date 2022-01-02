@@ -1,6 +1,24 @@
 open! Core
 open! Async
 
+let log_param =
+  let%map_open.Command () = Log.Global.set_level_via_param ()
+  and log_file =
+    flag "-log-file" (optional Filename.arg_type) ~doc:"FILE write logs to FILE"
+  in
+  match log_file with
+  | None -> ()
+  | Some filename -> Log.Global.set_output [ Log.Output.file `Sexp_hum ~filename ]
+;;
+
+let log_error (f : 'a Deferred.Or_error.t) () : 'a Deferred.Or_error.t =
+  match%map f with
+  | Ok x -> Ok x
+  | Error e ->
+    Log.Global.error_s (Error.sexp_of_t e);
+    Error e
+;;
+
 let cmd_authorize =
   Command.async_or_error
     ~summary:"Get an OAuth2 token from Google"
@@ -13,16 +31,17 @@ let cmd_authorize =
          "-output-file"
          (optional Filename.arg_type)
          ~doc:"FILE save oauth tokens to FILE"
-     in
-     fun () -> Photo_archiver.authorize ?output_file ~client_id ~client_secret ())
+     and () = log_param in
+     log_error (Photo_archiver.authorize ?output_file ~client_id ~client_secret ()))
 ;;
 
 let cmd_gen_config =
   Command.async
     ~summary:"Generate a config file"
     (let%map_open.Command output_file =
-       flag "-output-file" (optional Filename.arg_type) ~doc:"FILE write conbfig to FILE"
-     and config = Photo_archiver.Config.arg_type in
+       flag "-output-file" (optional Filename.arg_type) ~doc:"FILE write config to FILE"
+     and config = Photo_archiver.Config.arg_type
+     and () = log_param in
      fun () ->
        match output_file with
        | None ->
@@ -46,12 +65,11 @@ let cmd_list =
   Command.async_or_error
     ~summary:"List all photos on google photos"
     (let%map_open.Command config_file = config_file_param
-     and limit =
-       flag "-limit" (optional int) ~doc:"Stop after listing this many photos"
-     in
-     fun () ->
-       let%bind.Deferred.Or_error config = Photo_archiver.Config.load config_file in
-       Photo_archiver.list ?limit config)
+     and limit = flag "-limit" (optional int) ~doc:"Stop after listing this many photos"
+     and () = log_param in
+     log_error
+       (let%bind.Deferred.Or_error config = Photo_archiver.Config.load config_file in
+        Photo_archiver.list ?limit config))
 ;;
 
 let cmd_archive =
@@ -61,25 +79,26 @@ let cmd_archive =
      and dry_run = dry_run_param
      and limit =
        flag "-limit" (optional int) ~doc:"Stop after processing this many photos"
-     in
-     fun () ->
-       let%bind.Deferred.Or_error config = Photo_archiver.Config.load config_file in
-       Photo_archiver.archive ~dry_run ?limit config)
+     and () = log_param in
+     log_error
+       (let%bind.Deferred.Or_error config = Photo_archiver.Config.load config_file in
+        Photo_archiver.archive ~dry_run ?limit config))
 ;;
 
 let cmd_sync_db =
   Command.async_or_error
     ~summary:"Synchronize the database with files on disk"
     (let%map_open.Command config_file = config_file_param
-     and dry_run = dry_run_param in
-     fun () ->
-       let%bind.Deferred.Or_error config = Photo_archiver.Config.load config_file in
-       Photo_archiver.sync_db ~dry_run config)
+     and dry_run = dry_run_param
+     and () = log_param in
+     log_error
+       (let%bind.Deferred.Or_error config = Photo_archiver.Config.load config_file in
+        Photo_archiver.sync_db ~dry_run config))
 ;;
 
 let command =
   Command.group
-    ~summary:"TODO"
+    ~summary:"Maintains a local archive of photos from google-photos"
     [ "authorize", cmd_authorize
     ; "gen-config", cmd_gen_config
     ; "list", cmd_list

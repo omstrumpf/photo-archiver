@@ -104,7 +104,10 @@ let sync_db ?(dry_run = false) { Config.db_file; archive_dir; _ } =
         String.Set.symmetric_diff db_filenames archived_filenames |> Sequence.to_list
       in
       match List.is_empty diff with
-      | true -> print_endline "DB and archive are properly synchronized!" |> return
+      | true ->
+        Log.Global.info_s [%message "Confirmed DB/archive sync"];
+        print_endline "DB and archive are properly synchronized!";
+        return ()
       | false ->
         List.map diff ~f:(fun either ->
             match either with
@@ -120,19 +123,27 @@ let sync_db ?(dry_run = false) { Config.db_file; archive_dir; _ } =
                 | true ->
                   print_endline
                     [%string "Photo present in db but not found in archive: %{photo_s}."];
+                  Log.Global.info_s
+                    [%message
+                      "Photo present in db but not found in archive." (photo : Db.Photo.t)];
                   Ok ()
                 | false ->
                   print_endline
                     [%string
                       "Photo present in db but not found in archive: %{photo_s}. \
                        Removing from db."];
+                  Log.Global.info_s
+                    [%message
+                      "Photo present in db but not found in archive. Removing from db."
+                        (photo : Db.Photo.t)];
                   Db.remove_photo db ~id
               in
               Ok ()
             | Second archived_filename ->
-              Or_error.error_string
-                [%string
-                  "Photo present in archive but not found in db: %{archived_filename}"])
+              Or_error.error_s
+                [%message
+                  "Photo present in archive but not found in db."
+                    (archived_filename : string)])
         |> Or_error.combine_errors_unit
         |> Deferred.return)
 ;;
