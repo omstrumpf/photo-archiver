@@ -1,5 +1,5 @@
 (library
  (name photo_archiver)
- (libraries core google_photos sqlite3)
+ (libraries cohttp cohttp-async core google_photos sqlite3)
  (preprocess
   (pps ppx_jane)))

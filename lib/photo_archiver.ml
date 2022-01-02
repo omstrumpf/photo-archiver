@@ -28,6 +28,65 @@ let list ?limit { Config.auth_file; _ } =
   print_s
     [%sexp { photos : Google_photos.Api.List_library_contents.Photo.t list }]
 
+let archive ?(dry_run = false) ?limit { Config.auth_file; db_file; archive_dir }
+    =
+  let%bind oauth = Reader.load_sexp auth_file Google_photos.Oauth.t_of_sexp in
+  let%bind access_token = Google_photos.Oauth.obtain_access_token oauth in
+  let%bind photos =
+    Google_photos.Api.List_library_contents.submit ~access_token ()
+  in
+  let num_present_photos = ref 0 in
+  let num_new_photos = ref 0 in
+  let incr x = x := !x + 1 in
+  let over_limit () =
+    match limit with None -> false | Some limit -> !num_new_photos >= limit
+  in
+  let%map () =
+    Db.with_db ~db_file ~f:(fun db ->
+        Deferred.Or_error.List.iter photos ~f:(fun photo ->
+            if over_limit () then return ()
+            else
+              let {
+                Google_photos.Api.List_library_contents.Photo.id;
+                name;
+                created_at;
+                download_url;
+              } =
+                photo
+              in
+              let%bind db_photo = Db.lookup_photo db ~id |> Deferred.return in
+              match db_photo with
+              | Some _ ->
+                  incr num_present_photos;
+                  (* This photo is already archived *) return ()
+              | None -> (
+                  let created_at_date =
+                    Time_ns.to_date ~zone:(force Time_ns.Zone.local) created_at
+                  in
+                  match dry_run with
+                  | true ->
+                      print_endline
+                        [%string
+                          "Would download %{name} (%{created_at_date#Date})."];
+                      return ()
+                  | false ->
+                      print_endline
+                        [%string
+                          "Downloading %{name} (%{created_at_date#Date})..."];
+                      let%bind photo =
+                        Archive.download_photo ~archive_dir ~id ~name
+                          ~created_at ~download_url
+                      in
+                      let%map () =
+                        Db.insert_photo db photo |> Deferred.return
+                      in
+                      incr num_new_photos)))
+  in
+  print_endline
+    [%string
+      "Archiving complete! %{!num_present_photos#Int} photos were previously \
+       archived, and %{!num_new_photos#Int} new ones were downloaded."]
+
 let sync_db ?(dry_run = false) { Config.db_file; archive_dir; _ } =
   Db.with_db ~db_file ~f:(fun db ->
       let%bind db_photos = Db.all_photos db |> Deferred.return in

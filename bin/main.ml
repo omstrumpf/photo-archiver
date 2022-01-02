@@ -17,7 +17,7 @@ let cmd_authorize =
      fun () ->
        Photo_archiver.authorize ?output_file ~client_id ~client_secret ())
 
-let cmd_config =
+let cmd_gen_config =
   Command.async ~summary:"Generate a config file"
     (let%map_open.Command output_file =
        flag "-output-file"
@@ -33,24 +33,59 @@ let cmd_config =
        | Some output_file ->
            Photo_archiver.Config.save ~to_file:output_file config)
 
+let config_file_param =
+  let open Command.Param in
+  flag "-config-file" (required Filename.arg_type) ~doc:"FILE config file"
+
+let dry_run_param =
+  let open Command.Param in
+  flag "-dry-run" no_arg ~doc:"don't modify database"
+
 let cmd_list =
   Command.async_or_error ~summary:"List all photos on google photos"
-    (let%map_open.Command config = Photo_archiver.Config.arg_type
+    (let%map_open.Command config_file = config_file_param
      and limit =
        flag "-limit" (optional int) ~doc:"Stop after listing this many photos"
      in
-     fun () -> Photo_archiver.list ?limit config)
+     fun () ->
+       let%bind.Deferred.Or_error config =
+         Photo_archiver.Config.load config_file
+       in
+       Photo_archiver.list ?limit config)
+
+let cmd_archive =
+  Command.async_or_error ~summary:"Download missing photos"
+    (let%map_open.Command config_file = config_file_param
+     and dry_run = dry_run_param
+     and limit =
+       flag "-limit" (optional int)
+         ~doc:"Stop after processing this many photos"
+     in
+     fun () ->
+       let%bind.Deferred.Or_error config =
+         Photo_archiver.Config.load config_file
+       in
+       Photo_archiver.archive ~dry_run ?limit config)
 
 let cmd_sync_db =
   Command.async_or_error ~summary:"Synchronize the database with files on disk"
-    (let%map_open.Command config = Photo_archiver.Config.arg_type
-     and dry_run = flag "-dry-run" no_arg ~doc:"don't modify database" in
-     fun () -> Photo_archiver.sync_db ~dry_run config)
+    (let%map_open.Command config_file = config_file_param
+     and dry_run = dry_run_param in
+
+     fun () ->
+       let%bind.Deferred.Or_error config =
+         Photo_archiver.Config.load config_file
+       in
+       Photo_archiver.sync_db ~dry_run config)
 
 let command =
   Command.group ~summary:"TODO"
     [
-      ("authorize", cmd_authorize); ("list", cmd_list); ("sync-db", cmd_sync_db);
+      ("authorize", cmd_authorize);
+      ("gen-config", cmd_gen_config);
+      ("list", cmd_list);
+      ("archive", cmd_archive);
+      ("sync-db", cmd_sync_db);
     ]
 
 let () = Command.run command

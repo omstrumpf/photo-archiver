@@ -10,4 +10,8 @@ val authorize :
   unit Deferred.Or_error.t
 
 val list : ?limit:int -> Config.t -> unit Deferred.Or_error.t
+
+val archive :
+  ?dry_run:bool -> ?limit:int -> Config.t -> unit Deferred.Or_error.t
+
 val sync_db : ?dry_run:bool -> Config.t -> unit Deferred.Or_error.t
