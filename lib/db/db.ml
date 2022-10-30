@@ -8,7 +8,7 @@ let parse_db_row row =
   match Array.to_list row with
   | [ id; name; archive_path; created_at ] ->
     let%map.Or_error created_at =
-      Or_error.try_with (fun () -> Time_ns.of_string created_at)
+      Or_error.try_with (fun () -> Time_ns_unix.of_string created_at)
     in
     { Photo.id; name; archive_path; created_at }
   | _ ->
@@ -45,7 +45,7 @@ let with_db ~db_file ~f =
 let insert_photo t photo =
   Log.Global.info_s [%message "inserting photo to db" (photo : Photo.t)];
   let { Photo.id; name; archive_path; created_at } = photo in
-  let created_at = Time_ns.to_string created_at in
+  let created_at = Time_ns_unix.to_string created_at in
   Sqlite3.exec
     t
     [%string

@@ -15,17 +15,17 @@ let arg_type =
   let%map_open.Command auth_file =
     flag
       "-auth-file"
-      (required Filename.arg_type)
+      (required Filename_unix.arg_type)
       ~doc:"Path to file containing auth tokens"
   and db_file =
     flag
       "-database-file"
-      (required Filename.arg_type)
+      (required Filename_unix.arg_type)
       ~doc:"Path to sqlite3 database file"
   and archive_dir =
     flag
       "-archive-directory"
-      (required Filename.arg_type)
+      (required Filename_unix.arg_type)
       ~doc:"Path to photo archive directory"
   in
   { auth_file; db_file; archive_dir }

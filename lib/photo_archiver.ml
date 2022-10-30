@@ -56,7 +56,7 @@ let archive ?(dry_run = false) ?limit { Config.auth_file; db_file; archive_dir }
                 (* This photo is already archived *) return ()
               | None ->
                 let created_at_date =
-                  Time_ns.to_date ~zone:(force Time_ns.Zone.local) created_at
+                  Time_ns_unix.to_date ~zone:(force Time_ns_unix.Zone.local) created_at
                 in
                 (match dry_run with
                 | true ->

@@ -13,6 +13,7 @@ depends: [
     "cohttp"
     "cohttp-async"
     "core"
+    "core_unix"
     "ocaml"
     "ppx_jane"
     "ppx_yojson_conv"

@@ -50,7 +50,7 @@ module List_photos = struct
     type t =
       { id : string
       ; name : string
-      ; created_at : Time_ns.t
+      ; created_at : Time_ns_unix.t
       ; download_url : string
       }
     [@@deriving fields, sexp_of]
@@ -70,7 +70,7 @@ module List_photos = struct
       let { Media_metadata.creation_time; video = video_metadata; _ } = media_metadata in
       let%map.Or_error created_at =
         Or_error.try_with (fun () ->
-            Time_ns.of_string_gen ~if_no_timezone:`Local creation_time)
+            Time_ns_unix.of_string_gen ~if_no_timezone:`Local creation_time)
       in
       let download_url =
         let suffix =

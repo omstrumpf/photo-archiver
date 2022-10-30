@@ -4,7 +4,7 @@ open! Async
 let log_param =
   let%map_open.Command () = Log.Global.set_level_via_param ()
   and log_file =
-    flag "-log-file" (optional Filename.arg_type) ~doc:"FILE write logs to FILE"
+    flag "-log-file" (optional Filename_unix.arg_type) ~doc:"FILE write logs to FILE"
   in
   match log_file with
   | None -> ()
@@ -29,7 +29,7 @@ let cmd_authorize =
      and output_file =
        flag
          "-output-file"
-         (optional Filename.arg_type)
+         (optional Filename_unix.arg_type)
          ~doc:"FILE save oauth tokens to FILE"
      and () = log_param in
      log_error (Photo_archiver.authorize ?output_file ~client_id ~client_secret ()))
@@ -39,7 +39,7 @@ let cmd_gen_config =
   Command.async
     ~summary:"Generate a config file"
     (let%map_open.Command output_file =
-       flag "-output-file" (optional Filename.arg_type) ~doc:"FILE write config to FILE"
+       flag "-output-file" (optional Filename_unix.arg_type) ~doc:"FILE write config to FILE"
      and config = Photo_archiver.Config.arg_type
      and () = log_param in
      fun () ->
@@ -53,7 +53,7 @@ let cmd_gen_config =
 
 let config_file_param =
   let open Command.Param in
-  flag "-config-file" (required Filename.arg_type) ~doc:"FILE config file"
+  flag "-config-file" (required Filename_unix.arg_type) ~doc:"FILE config file"
 ;;
 
 let dry_run_param =
@@ -107,4 +107,4 @@ let command =
     ]
 ;;
 
-let () = Command.run command
+let () = Command_unix.run command

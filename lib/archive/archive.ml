@@ -21,7 +21,7 @@ let all_archived_files ~archive_dir =
 ;;
 
 let archive_path ~name ~created_at =
-  let date = Time_ns.to_date created_at ~zone:(force Time_ns.Zone.local) in
+  let date = Time_ns_unix.to_date created_at ~zone:(force Time_ns_unix.Zone.local) in
   let year = Printf.sprintf "%04d" (Date.year date) in
   let month = Printf.sprintf "%02d" (Date.month date |> Month.to_int) in
   year ^/ month ^/ name

@@ -1,6 +1,6 @@
 (executable
  (public_name photo_archiver)
  (name main)
- (libraries core photo_archiver)
+ (libraries core core_unix.command_unix photo_archiver)
  (preprocess
   (pps ppx_jane)))
